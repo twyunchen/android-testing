@@ -19,6 +19,7 @@ import androidx.lifecycle.LiveData
 import com.example.android.architecture.blueprints.todoapp.data.Result
 import com.example.android.architecture.blueprints.todoapp.data.Result.Success
 import com.example.android.architecture.blueprints.todoapp.data.Task
+import com.example.android.architecture.blueprints.todoapp.util.EspressoIdlingResource.wrapEspressoIdlingResource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -29,19 +30,21 @@ import kotlinx.coroutines.withContext
  * Concrete implementation to load tasks from the data sources into a cache.
  */
 class DefaultTasksRepository(
-    private val tasksRemoteDataSource: TasksDataSource,
-    private val tasksLocalDataSource: TasksDataSource,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO) : TasksRepository {
+        private val tasksRemoteDataSource: TasksDataSource,
+        private val tasksLocalDataSource: TasksDataSource,
+        private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO) : TasksRepository {
 
     override suspend fun getTasks(forceUpdate: Boolean): Result<List<Task>> {
-        if (forceUpdate) {
-            try {
-                updateTasksFromRemoteDataSource()
-            } catch (ex: Exception) {
-                return Result.Error(ex)
+        wrapEspressoIdlingResource {
+            if (forceUpdate) {
+                try {
+                    updateTasksFromRemoteDataSource()
+                } catch (ex: Exception) {
+                    return Result.Error(ex)
+                }
             }
+            return tasksLocalDataSource.getTasks()
         }
-        return tasksLocalDataSource.getTasks()
     }
 
     override suspend fun refreshTasks() {
